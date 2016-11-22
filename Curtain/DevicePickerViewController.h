@@ -9,6 +9,7 @@
 
 #import <UIKit/UIKit.h>
 #import <CoreBluetooth/CoreBluetooth.h>
+#import "CCDevice.h"
 
 
 @protocol DevicePickerDelegate;
@@ -23,6 +24,6 @@
 
 @protocol DevicePickerDelegate <NSObject>
 
-- (void)pickedDevice:(CBPeripheral *)peripheral;
+- (void)pickedDevice:(NSDictionary *)info;
 
 @end

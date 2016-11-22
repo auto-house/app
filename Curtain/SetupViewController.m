@@ -21,9 +21,13 @@
 
 @interface SetupViewController ()
 
+@property (nonatomic, retain) NSString *authKey;
+@property (nonatomic, retain) NSString *encryptionKey;
 @property (nonatomic, retain) CBPeripheral *peripheral;
+
 @property (nonatomic, retain) CCGroup *group;
 @property (nonatomic, retain) NSString *nickname;
+@property (nonatomic, retain) UIImage *image;
 
 @end
 
@@ -59,11 +63,94 @@
     
 }
 
+- (void)presentImagePickerWithSource:(UIImagePickerControllerSourceType)source {
+    
+    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+    picker.sourceType = source;
+    picker.delegate = self;
+    [self presentViewController:picker animated:YES completion:nil];
+    
+}
+
+- (void)presentImageSourcePickerActionSheet {
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Image Source" message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    UIAlertAction *libraryAction = [UIAlertAction actionWithTitle:@"Library" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self presentImagePickerWithSource:UIImagePickerControllerSourceTypePhotoLibrary];
+    }];
+    [alert addAction:libraryAction];
+    
+    UIAlertAction *cameraAction = [UIAlertAction actionWithTitle:@"Camera" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self presentImagePickerWithSource:UIImagePickerControllerSourceTypeCamera];
+    }];
+    [alert addAction:cameraAction];
+    
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+    [alert addAction:cancelAction];
+    
+    [self presentViewController:alert animated:YES completion:nil];
+    
+}
+
+- (void)registerDevice {
+    
+    NSError *error;
+    
+    NSDate *creationDate = [NSDate date];
+    NSNumber *interval = [NSNumber numberWithDouble:[creationDate timeIntervalSince1970]];
+    NSString *name = [interval.stringValue stringByReplacingOccurrencesOfString:@"." withString:@""];
+    NSString *imageName = [NSString stringWithFormat:@"%@.png", name];
+    NSString *imageUrl = imageName;
+    
+    // Save image to the disk.
+    
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsPath = [paths objectAtIndex:0];
+    NSString *filePath = [documentsPath stringByAppendingPathComponent:imageUrl];
+    
+    NSData *imageData = UIImagePNGRepresentation(self.image);
+    [imageData writeToFile:filePath atomically:YES];
+    
+    // Create the database entity.
+    
+    CCDevice *device = [NSEntityDescription insertNewObjectForEntityForName:@"Device" inManagedObjectContext:self.managedObjectContext];
+    
+    device.creationDate = creationDate;
+    
+    device.authKey = self.authKey;
+    device.encryptionKey = self.encryptionKey;
+    
+    device.group = self.group;
+    device.name = self.nickname;
+    device.imageUrl = imageUrl;
+    
+    // Persist the data.
+    
+    if ([self.managedObjectContext save:&error]) {
+        
+        [self dismissViewControllerAnimated:YES completion:nil];
+        
+    }else{
+        
+        NSLog(@"Failed to save the device with error: %@.", error);
+        
+    }
+    
+}
+
 #pragma mark - Device picker delegate
 
-- (void)pickedDevice:(CBPeripheral *)peripheral {
+- (void)pickedDevice:(NSDictionary *)info {
     
+    NSString *authKey = [info objectForKey:@"authKey"];
+    NSString *encryptionKey = [info objectForKey:@"encryptionKey"];
+    CBPeripheral *peripheral = [info objectForKey:@"peripheral"];
+    
+    self.authKey = authKey;
+    self.encryptionKey = encryptionKey;
     self.peripheral = peripheral;
+    
     [self.tableView reloadRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:0 inSection:0]] withRowAnimation:UITableViewRowAnimationAutomatic];
     
 }
@@ -77,6 +164,29 @@
     
 }
 
+#pragma mark - Text field delegate
+
+- (BOOL)textFieldShouldReturn:(UITextField *)textField {
+    
+    [textField endEditing:YES];
+    
+    return NO;
+}
+
+#pragma mark - Image picker delegate
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<NSString *,id> *)info {
+    
+    self.image = [info objectForKey:UIImagePickerControllerOriginalImage];
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:3 inSection:0]];
+    UIImageView *imageView = (UIImageView *)cell.accessoryView;
+    imageView.image = self.image;
+    
+    [self dismissViewControllerAnimated:YES completion:nil];
+    
+}
+
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
@@ -84,7 +194,11 @@
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return (section == 0 ? 3 : 1);
+    return (section == 0 ? 4 : 1);
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    return (indexPath.section == 0 && indexPath.row == 3 ? 100 : 44);
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -92,6 +206,7 @@
     static NSString * const cellIdentifierDefault = @"cell-identifier-default";
     static NSString * const cellIdentifierDoubleAccessories = @"cell-identifier-double-accessories";
     static NSString * const cellIdentifierTextInput = @"cell-identifier-text-input";
+    static NSString * const cellIdentifierImageView  = @"cell-identifier-image-view";
     
     CGSize screenSize = [[UIScreen mainScreen] bounds].size;
     CGFloat leftPadding = tableView.separatorInset.left;
@@ -99,6 +214,7 @@
     UITableViewCell *cell;
     UILabel *accessoryLabel;
     UITextField *textField;
+    UIImageView *imageView;
     
     if (indexPath.section == 0) {
         
@@ -114,10 +230,12 @@
                 accessoryLabel = [[UILabel alloc] initWithFrame:CGRectMake(leftPadding+100, 0, screenSize.width-leftPadding-leftPadding-100-10-8, 44)];
                 accessoryLabel.textAlignment = NSTextAlignmentRight;
                 accessoryLabel.textColor = [UIColor colorWithRed:142/255.f green:142/255.f blue:147/255.f alpha:1];
-                accessoryLabel.text = @"Google";
+                accessoryLabel.tag = CELL_DOUBLE_ACCESSORIES_TEXT_LABEL;
                 [cell.contentView addSubview:accessoryLabel];
                 
-                //accessoryLabel.backgroundColor = [UIColor orangeColor];
+            }else{
+                
+                accessoryLabel = [cell viewWithTag:CELL_DOUBLE_ACCESSORIES_TEXT_LABEL];
                 
             }
             
@@ -133,7 +251,7 @@
                 
             }
             
-        }else{
+        }else if (indexPath.row == 2) {
             
             cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifierTextInput];
             
@@ -143,7 +261,7 @@
                 
                 textField = [[UITextField alloc] initWithFrame:CGRectMake(leftPadding+100, 0, screenSize.width-leftPadding-leftPadding-100, 44)];
                 textField.autocorrectionType = UITextAutocorrectionTypeNo;
-                textField.returnKeyType = UIReturnKeyNext;
+                textField.returnKeyType = UIReturnKeyDone;
                 textField.textAlignment = NSTextAlignmentRight;
                 textField.textColor = [UIColor colorWithRed:142/255.f green:142/255.f blue:147/255.f alpha:1];
                 textField.placeholder = @"Ex: Master Bedroom Curatain";
@@ -151,12 +269,31 @@
                 textField.tag = CELL_TEXT_INPUT_TEXT_FIELD;
                 [cell.contentView addSubview:textField];
                 
-                //textField.backgroundColor = [UIColor orangeColor];
+            }else{
+                
+                textField = [cell viewWithTag:CELL_TEXT_INPUT_TEXT_FIELD];
                 
             }
             
             cell.accessoryType = UITableViewCellAccessoryNone;
             cell.textLabel.text = @"Nickname";
+            
+        }else{
+            
+            cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifierImageView];
+            
+            if (cell == nil) {
+                
+                cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifierImageView];
+                
+                imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 80, 80)];
+                imageView.backgroundColor = [UIColor orangeColor];
+                cell.accessoryView = imageView;
+                
+            }
+            
+            cell.textLabel.text = @"Image";
+            imageView.image = self.image;
             
         }
         
@@ -196,16 +333,15 @@
             view.managedObjectContext = self.managedObjectContext;
             [self.navigationController pushViewController:view animated:YES];
             
+        }else if (indexPath.row == 3) {
+            
+            [self presentImageSourcePickerActionSheet];
+            
         }
         
     }else{
         
-        CCDevice *device = [NSEntityDescription insertNewObjectForEntityForName:@"Device" inManagedObjectContext:self.managedObjectContext];
-        device.name = self.nickname;
-        
-        // creation date
-        // picture
-        // connection key
+        [self registerDevice];
         
     }
     

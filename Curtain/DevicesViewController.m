@@ -11,6 +11,7 @@
 #import "AppDelegate.h"
 #import "SettingsViewController.h"
 #import "SetupViewController.h"
+#import "CCDevice.h"
 
 
 @interface DevicesViewController ()
@@ -53,6 +54,18 @@
     
     self.navigationItem.leftBarButtonItem = settingsBBI;
     self.navigationItem.rightBarButtonItem = setupBBI;
+    
+    
+    
+    // Fetch devices.
+    
+    NSError *error;
+    NSFetchRequest *request = [NSFetchRequest fetchRequestWithEntityName:@"Device"];
+    NSArray *devices = [self.managedObjectContext executeFetchRequest:request error:&error];
+    
+    for (CCDevice *device in devices) {
+        NSLog(@"Name:%@ AuthKey:%@ EncryptionKey:%@ ImageUrl:%@", device.name, device.authKey, device.encryptionKey, device.imageUrl);
+    }
     
 }
 

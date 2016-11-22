@@ -13,7 +13,13 @@
 #import "GroupPickerViewController.h"
 
 
-@interface SetupViewController : UITableViewController <UITextFieldDelegate, DevicePickerDelegate, GroupPickerDelegate>
+@interface SetupViewController : UITableViewController <
+                                                        UINavigationControllerDelegate,
+                                                        UIImagePickerControllerDelegate,
+                                                        UITextFieldDelegate,
+                                                        DevicePickerDelegate,
+                                                        GroupPickerDelegate
+                                                        >
 
 @property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
 @property (nonatomic, retain) CBCentralManager *centralManager;
