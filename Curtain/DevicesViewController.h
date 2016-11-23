@@ -9,8 +9,9 @@
 
 #import <UIKit/UIKit.h>
 #import <CoreBluetooth/CoreBluetooth.h>
+#import "SetupViewController.h"
 
 
-@interface DevicesViewController : UITableViewController <CBCentralManagerDelegate, CBPeripheralDelegate>
+@interface DevicesViewController : UITableViewController <CBCentralManagerDelegate, CBPeripheralDelegate, SetupDeviceDelegate>
 
 @end

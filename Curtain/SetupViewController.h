@@ -13,6 +13,9 @@
 #import "GroupPickerViewController.h"
 
 
+@protocol SetupDeviceDelegate;
+
+
 @interface SetupViewController : UITableViewController <
                                                         UINavigationControllerDelegate,
                                                         UIImagePickerControllerDelegate,
@@ -21,7 +24,15 @@
                                                         GroupPickerDelegate
                                                         >
 
+@property (nonatomic, retain) id<SetupDeviceDelegate> delegate;
 @property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
 @property (nonatomic, retain) CBCentralManager *centralManager;
+
+@end
+
+
+@protocol SetupDeviceDelegate <NSObject>
+
+- (void)linkedDevice:(CCDevice *)device;
 
 @end

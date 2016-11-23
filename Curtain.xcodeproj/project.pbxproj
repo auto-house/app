@@ -21,6 +21,7 @@
 		604F6B291DE4F0860056CE39 /* CCDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 604F6B261DE4F0860056CE39 /* CCDevice.m */; };
 		604F6B2A1DE4F0860056CE39 /* CCDevice+CoreDataProperties.m in Sources */ = {isa = PBXBuildFile; fileRef = 604F6B281DE4F0860056CE39 /* CCDevice+CoreDataProperties.m */; };
 		604F6B331DE4FA730056CE39 /* BLEManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 604F6B321DE4FA730056CE39 /* BLEManager.m */; };
+		604F6B351DE545FA0056CE39 /* four-bars@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 604F6B341DE545FA0056CE39 /* four-bars@2x.png */; };
 		60A80D6F1DE3E624009FD8D4 /* three-bars@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 60A80D6E1DE3E624009FD8D4 /* three-bars@2x.png */; };
 		60E1F8CC1DD5F946004251CF /* DevicesViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 60E1F8CB1DD5F946004251CF /* DevicesViewController.m */; };
 		60E1F8CF1DD5FAA8004251CF /* SetupViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 60E1F8CE1DD5FAA8004251CF /* SetupViewController.m */; };
@@ -67,6 +68,7 @@
 		604F6B281DE4F0860056CE39 /* CCDevice+CoreDataProperties.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "CCDevice+CoreDataProperties.m"; sourceTree = "<group>"; };
 		604F6B311DE4FA730056CE39 /* BLEManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BLEManager.h; sourceTree = "<group>"; };
 		604F6B321DE4FA730056CE39 /* BLEManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BLEManager.m; sourceTree = "<group>"; };
+		604F6B341DE545FA0056CE39 /* four-bars@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "four-bars@2x.png"; sourceTree = "<group>"; };
 		60A80D6E1DE3E624009FD8D4 /* three-bars@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "three-bars@2x.png"; path = "../../three-bars@2x.png"; sourceTree = "<group>"; };
 		60E1F8CA1DD5F946004251CF /* DevicesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DevicesViewController.h; sourceTree = "<group>"; };
 		60E1F8CB1DD5F946004251CF /* DevicesViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DevicesViewController.m; sourceTree = "<group>"; };
@@ -200,6 +202,7 @@
 			isa = PBXGroup;
 			children = (
 				60A80D6E1DE3E624009FD8D4 /* three-bars@2x.png */,
+				604F6B341DE545FA0056CE39 /* four-bars@2x.png */,
 			);
 			name = Graphics;
 			sourceTree = "<group>";
@@ -321,6 +324,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6017ADE01DD39349008EABF2 /* LaunchScreen.storyboard in Resources */,
+				604F6B351DE545FA0056CE39 /* four-bars@2x.png in Resources */,
 				6017ADDD1DD39349008EABF2 /* Assets.xcassets in Resources */,
 				6017ADD81DD39349008EABF2 /* Main.storyboard in Resources */,
 				60A80D6F1DE3E624009FD8D4 /* three-bars@2x.png in Resources */,

@@ -524,6 +524,7 @@
             
         }
         
+        cell.imageView.image = [UIImage imageNamed:@"four-bars.png"];
         cell.textLabel.text = peripheral.name;
         
     }else{
@@ -534,7 +535,7 @@
             cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifierDefault];
         }
         
-        cell.imageView.image = [UIImage imageNamed:@"three-bars.png"];
+        cell.imageView.image = [UIImage imageNamed:@"four-bars.png"];
         cell.textLabel.text = (peripheral.name.length ? peripheral.name : @"Unknow Device");
         cell.accessoryType = (peripheral == self.selectedPeripheral ? UITableViewCellAccessoryCheckmark : UITableViewCellAccessoryNone);
         

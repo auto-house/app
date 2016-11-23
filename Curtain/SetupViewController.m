@@ -129,6 +129,10 @@
     
     if ([self.managedObjectContext save:&error]) {
         
+        if ([self.delegate respondsToSelector:@selector(linkedDevice:)]) {
+            [self.delegate linkedDevice:device];
+        }
+        
         [self dismissViewControllerAnimated:YES completion:nil];
         
     }else{
@@ -170,7 +174,16 @@
     
     [textField endEditing:YES];
     
+    self.nickname = textField.text;
+    
     return NO;
+}
+
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string {
+    
+    self.nickname = [textField.text stringByReplacingCharactersInRange:range withString:string];
+    
+    return YES;
 }
 
 #pragma mark - Image picker delegate

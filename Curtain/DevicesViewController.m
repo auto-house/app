@@ -97,6 +97,7 @@
     if (self.centralManager.state == CBManagerStatePoweredOn || foo) {
         
         SetupViewController *view = [[SetupViewController alloc] initWithStyle:UITableViewStyleGrouped];
+        view.delegate = self;
         view.managedObjectContext = self.managedObjectContext;
         view.centralManager = self.centralManager;
         UINavigationController *navCon = [[UINavigationController alloc] initWithRootViewController:view];
@@ -172,6 +173,21 @@
             break;
             
     }
+    
+}
+
+#pragma mark - Setup device delegate
+
+- (void)linkedDevice:(CCDevice *)device {
+    
+    NSInteger index = self.devices.count;
+    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:index inSection:0];
+    
+    [self.devices addObject:device];
+    
+    [self.tableView beginUpdates];
+    [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+    [self.tableView endUpdates];
     
 }
 
