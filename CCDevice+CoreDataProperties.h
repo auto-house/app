@@ -15,11 +15,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (NSFetchRequest<CCDevice *> *)fetchRequest;
 
-@property (nullable, nonatomic, copy) NSDate *creationDate;
-@property (nullable, nonatomic, copy) NSString *name;
-@property (nullable, nonatomic, copy) NSString *imageUrl;
 @property (nullable, nonatomic, copy) NSString *authKey;
+@property (nullable, nonatomic, copy) NSDate *creationDate;
 @property (nullable, nonatomic, copy) NSString *encryptionKey;
+@property (nullable, nonatomic, copy) NSString *imageUrl;
+@property (nullable, nonatomic, copy) NSString *name;
+@property (nullable, nonatomic, retain) CBPeripheral *peripheral;
 @property (nullable, nonatomic, retain) CCGroup *group;
 
 @end

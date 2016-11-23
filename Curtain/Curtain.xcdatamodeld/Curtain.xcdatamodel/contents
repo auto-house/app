@@ -6,6 +6,7 @@
         <attribute name="encryptionKey" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="imageUrl" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="peripheral" optional="YES" transient="YES" attributeType="Transformable" customClassName="CBPeripheral" syncable="YES"/>
         <relationship name="group" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Group" inverseName="device" inverseEntity="Group" syncable="YES"/>
     </entity>
     <entity name="Group" representedClassName=".CCGroup" syncable="YES">
@@ -14,7 +15,7 @@
         <relationship name="device" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Device" inverseName="group" inverseEntity="Device" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Device" positionX="-54" positionY="9" width="128" height="135"/>
+        <element name="Device" positionX="-54" positionY="9" width="128" height="150"/>
         <element name="Group" positionX="-63" positionY="-18" width="128" height="90"/>
     </elements>
 </model>

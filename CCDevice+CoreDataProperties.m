@@ -14,11 +14,12 @@
 	return [[NSFetchRequest alloc] initWithEntityName:@"Device"];
 }
 
-@dynamic creationDate;
-@dynamic name;
-@dynamic imageUrl;
 @dynamic authKey;
+@dynamic creationDate;
 @dynamic encryptionKey;
+@dynamic imageUrl;
+@dynamic name;
+@dynamic peripheral;
 @dynamic group;
 
 @end

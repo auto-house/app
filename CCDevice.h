@@ -9,7 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreData/CoreData.h>
 
-@class CCGroup;
+@class CBPeripheral, CCGroup;
 
 NS_ASSUME_NONNULL_BEGIN
 

@@ -12,12 +12,17 @@
 #import "SettingsViewController.h"
 #import "SetupViewController.h"
 #import "CCDevice.h"
+#import "CCGroup.h"
+#import "DeviceViewController.h"
 
 
 @interface DevicesViewController ()
 
 @property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
 @property (nonatomic, retain) CBCentralManager *centralManager;
+
+@property (nonatomic, retain) NSMutableArray *devices;
+@property (nonatomic, retain) NSMutableDictionary *images;
 
 @end
 
@@ -31,6 +36,7 @@
     [super viewDidLoad];
     
     self.title = @"Devices";
+    self.tableView.rowHeight = 70;
     
     AppDelegate *delegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
     self.managedObjectContext = delegate.persistentContainer.viewContext;
@@ -67,6 +73,9 @@
         NSLog(@"Name:%@ AuthKey:%@ EncryptionKey:%@ ImageUrl:%@", device.name, device.authKey, device.encryptionKey, device.imageUrl);
     }
     
+    self.devices = [NSMutableArray arrayWithArray:devices];
+    self.images = [[NSMutableDictionary alloc] init];
+    
 }
 
 #pragma mark - Private
@@ -99,6 +108,37 @@
         
     }
     
+}
+
+- (UIImage *)cropImage:(UIImage *)image {
+    
+    UIImage *cropped;
+    
+    CGFloat side = MIN(image.size.width, image.size.height);
+    CGSize size = CGSizeMake(side, side);
+    
+    CGFloat downScale = side/70;
+    CGFloat borderWidth = downScale*20;
+    
+    UIGraphicsBeginImageContext(size);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    CGContextTranslateCTM(context, 0, size.height);
+    CGContextScaleCTM(context, 1.0, -1.0);
+    
+    CGContextAddArc(context, side/2, side/2, (side-borderWidth)/2, 0, 2*M_PI, 0);
+    CGContextClosePath(context);
+    CGContextClip(context);
+    
+    CGRect clipRect = CGRectMake(0, 0, size.width, size.height);
+    CGContextClipToRect(context, clipRect);
+    CGRect cropRect = CGRectMake(-(image.size.width-size.width)/2, -(image.size.width-size.height)/2, image.size.width, image.size.height);
+    CGContextDrawImage(context, cropRect, image.CGImage);
+    
+    cropped = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    return cropped;
 }
 
 #pragma mark - CBCentralManagerDelegate
@@ -142,7 +182,7 @@
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return 5;
+    return self.devices.count;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -152,12 +192,64 @@
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifierDefault];
     
     if (cell == nil) {
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifierDefault];
+        
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellIdentifierDefault];
+        
     }
     
-    cell.textLabel.text = [NSString stringWithFormat:@"Device %li", (long)indexPath.row];
+    CCDevice *device = [self.devices objectAtIndex:indexPath.row];
+    UIImage *image = [self.images objectForKey:device.imageUrl];
+    
+    if (image == nil) {
+        
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString *documentsPath = [paths objectAtIndex:0];
+        NSString *filePath = [documentsPath stringByAppendingPathComponent:device.imageUrl];
+        
+        NSData *imageData = [NSData dataWithContentsOfFile:filePath];
+        image = [self cropImage:[UIImage imageWithData:imageData]];
+        
+        [self.images setValue:image forKey:device.imageUrl];
+        
+    }
+    
+    cell.imageView.image = image;
+    cell.textLabel.text = device.name;
+    cell.detailTextLabel.text = device.group.name;
+    cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
     
     return cell;
+}
+
+#pragma mark - Table view delegate
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    CCDevice *device = [self.devices objectAtIndex:indexPath.row];
+    UIImage *image = [self.images objectForKey:device.imageUrl];
+    
+    if (image == nil) {
+        
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString *documentsPath = [paths objectAtIndex:0];
+        NSString *filePath = [documentsPath stringByAppendingPathComponent:device.imageUrl];
+        
+        NSData *imageData = [NSData dataWithContentsOfFile:filePath];
+        image = [self cropImage:[UIImage imageWithData:imageData]];
+        
+        [self.images setValue:image forKey:device.imageUrl];
+        
+    }
+    
+    DeviceViewController *view = [[DeviceViewController alloc] initWithStyle:UITableViewStyleGrouped];
+    view.centralManager = self.centralManager;
+    view.device = device;
+    view.image = image;
+    
+    [self.navigationController pushViewController:view animated:YES];
+    
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
 }
 
 @end
