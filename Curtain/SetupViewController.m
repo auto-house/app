@@ -12,7 +12,7 @@
 #import "DevicePickerViewController.h"
 #import "GroupPickerViewController.h"
 
-#define CELL_DOUBLE_ACCESSORIES_TEXT_LABEL      10002
+#define CELL_DOUBLE_ACCESSORIES_TEXT_LABEL      10001
 #define CELL_DOUBLE_ACCESSORIES_ACCESSORY_LABEL 10002
 
 #define CELL_TEXT_INPUT_TEXT_LABEL 20001

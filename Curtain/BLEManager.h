@@ -6,12 +6,13 @@
 //  Copyright © 2016 Mateus Nunes. All rights reserved.
 //
 
+
 #import <Foundation/Foundation.h>
 #import <CoreBluetooth/CoreBluetooth.h>
 
+
 @interface BLEManager : NSObject <CBCentralManagerDelegate, CBPeripheralDelegate>
 
-@property (nonatomic, retain) CBCentralManager *centralManager;
-@property (nonatomic, retain) NSArray *peripherals;
++ (id)sharedManager;
 
 @end

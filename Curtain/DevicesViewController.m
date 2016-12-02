@@ -258,6 +258,7 @@
     }
     
     DeviceViewController *view = [[DeviceViewController alloc] initWithStyle:UITableViewStyleGrouped];
+    view.managedObjectContext = self.managedObjectContext;
     view.centralManager = self.centralManager;
     view.device = device;
     view.image = image;

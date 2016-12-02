@@ -12,7 +12,15 @@
 #import "CCDevice.h"
 
 
+typedef NS_ENUM(NSInteger, CurtainAction) {
+    CurtainActionOpen = 1,
+    CurtainActionClose
+};
+
+
 @interface DeviceViewController : UITableViewController <CBCentralManagerDelegate, CBPeripheralDelegate>
+
+@property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
 
 @property (nonatomic, retain) CBCentralManager *centralManager;
 @property (nonatomic, retain) CCDevice *device;

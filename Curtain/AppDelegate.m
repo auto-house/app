@@ -6,17 +6,23 @@
 //  Copyright © 2016 Mateus Nunes. All rights reserved.
 //
 
+
 #import "AppDelegate.h"
+#import "BLEManager.h"
+
 
 @interface AppDelegate ()
 
 @end
 
+
 @implementation AppDelegate
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // Override point for customization after application launch.
+    
+    BLEManager *manager = [BLEManager sharedManager];
+    
     return YES;
 }
 
