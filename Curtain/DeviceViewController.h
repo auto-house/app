@@ -10,6 +10,7 @@
 #import <UIKit/UIKit.h>
 #import <CoreBluetooth/CoreBluetooth.h>
 #import "CCDevice.h"
+#import "ScheduleViewController.h"
 
 
 typedef NS_ENUM(NSInteger, CurtainAction) {
@@ -18,7 +19,7 @@ typedef NS_ENUM(NSInteger, CurtainAction) {
 };
 
 
-@interface DeviceViewController : UITableViewController <CBCentralManagerDelegate, CBPeripheralDelegate>
+@interface DeviceViewController : UITableViewController <CBCentralManagerDelegate, CBPeripheralDelegate, ScheduleViewControllerDelegate>
 
 @property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
 

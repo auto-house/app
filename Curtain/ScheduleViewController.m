@@ -103,6 +103,10 @@
                       @{
                           @"title": @"Close",
                           @"value": @(SchedulableActionClose)
+                          },
+                      @{
+                          @"title": @"Blink",
+                          @"value": @(SchedulableActionBlink)
                           }
                       ];
     
@@ -175,13 +179,18 @@
     
     schedule.device = self.device;
     schedule.creationDate = [NSDate date];
-    schedule.action = self.action;
+    schedule.action = @(self.action);
     schedule.repeat = self.repeat;
     schedule.active = @YES;
     schedule.notify = @(self.notify);
+    schedule.isSynchronized = @NO;
     schedule.time = self.time;
     
     if ([self.managedObjectContext save:&error]) {
+        
+        if ([self.delegate respondsToSelector:@selector(scheduledActionCreated:)]) {
+            [self.delegate scheduledActionCreated:schedule];
+        }
         
         [self dismissViewControllerAnimated:YES completion:nil];
         

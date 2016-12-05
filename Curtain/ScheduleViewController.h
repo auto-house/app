@@ -10,11 +10,13 @@
 #import <UIKit/UIKit.h>
 #import "PickerViewController.h"
 #import "CCDevice.h"
+#import "CCSchedule.h"
 
 
 typedef NS_ENUM(NSInteger, SchedulableAction) {
     SchedulableActionOpen,
-    SchedulableActionClose
+    SchedulableActionClose,
+    SchedulableActionBlink
 };
 
 typedef NS_ENUM(NSInteger, Weekday) {
@@ -28,9 +30,21 @@ typedef NS_ENUM(NSInteger, Weekday) {
 };
 
 
+@protocol ScheduleViewControllerDelegate;
+
+
 @interface ScheduleViewController : UITableViewController <PickerDelegate>
+
+@property (nonatomic, retain) id<ScheduleViewControllerDelegate> delegate;
 
 @property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
 @property (nonatomic, retain) CCDevice *device;
+
+@end
+
+
+@protocol ScheduleViewControllerDelegate <NSObject>
+
+- (void)scheduledActionCreated:(CCSchedule *)schedule;
 
 @end

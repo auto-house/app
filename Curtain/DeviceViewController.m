@@ -15,6 +15,11 @@
 
 #import "ScheduleViewController.h"
 
+#define CELL_DEVICE_IMAGE_VIEW_TAG  90001
+#define CELL_DEVICE_LABEL_GROUP_TAG 90002
+#define CELL_DEVICE_LABEL_TITLE_TAG 90003
+#define CELL_DEVICE_LABEL_STATE_TAG 90004
+
 #define CURTAIN_SERVICE_CONNECTION_UUID                             @"FFFFFFFF-FFFF-FFFF-FFF0-FFFFFFFFFFFF"
 #define CURTAIN_SERVICE_CONNECTION_CHARACTERISTIC_BLINK_UUID        @"FFFFFFFF-FFFF-FFFF-FFF0-FFFFFFFFFFF1"
 #define CURTAIN_SERVICE_CONNECTION_CHARACTERISTIC_SETUP_UUID        @"FFFFFFFF-FFFF-FFFF-FFF0-FFFFFFFFFFF2"
@@ -28,8 +33,11 @@
 #define CURTAIN_SERVICE_LIGHTS_CHARACTERISTIC_EXTERNAL_UUID         @"FFFFFFFF-FFFF-FFFF-FFF2-FFFFFFFFFFF2"
 
 #define CURTAIN_SERVICE_MOVE_UUID                                   @"FFFFFFFF-FFFF-FFFF-FFF3-FFFFFFFFFFFF"
-#define CURTAIN_SERVICE_MOVE_CHARACTERISTIC_OPEN_UUID               @"FFFFFFFF-FFFF-FFFF-FFF3-FFFFFFFFFFF1"
-#define CURTAIN_SERVICE_MOVE_CHARACTERISTIC_CLOSE_UUID              @"FFFFFFFF-FFFF-FFFF-FFF3-FFFFFFFFFFF2"
+#define CURTAIN_SERVICE_MOVE_CHARACTERISTIC_FULL_UUID               @"FFFFFFFF-FFFF-FFFF-FFF3-FFFFFFFFFFF1"
+
+#define CURTAIN_SERVICE_SYNC_UUID                                   @"FFFFFFFF-FFFF-FFFF-FFF4-FFFFFFFFFFFF"
+#define CURTAIN_SERVICE_SYNC_CHARACTERISTIC_INCLUDE_UUID            @"FFFFFFFF-FFFF-FFFF-FFF4-FFFFFFFFFFF1"
+#define CURTAIN_SERVICE_SYNC_CHARACTERISTIC_ABANDON_UUID            @"FFFFFFFF-FFFF-FFFF-FFF4-FFFFFFFFFFF2"
 
 
 @interface DeviceViewController ()
@@ -68,10 +76,40 @@
     NSArray *schedule = [self.managedObjectContext executeFetchRequest:request error:&error];
     
     for (CCSchedule *item in schedule) {
-        NSLog(@"Schedule created on %@", item.creationDate);
+        NSLog(@"Schedule %@ %@ %@ %@ %@", item.creationDate, item.action, item.notify, item.repeat, item.time);
     }
     
     self.schedule = [NSMutableArray arrayWithArray:schedule];
+    
+}
+
+#pragma mark - NSObjects
+
+- (NSString *)prettyPeripheralState:(CBPeripheralState)state {
+    
+    NSString *pretty;
+    
+    switch (state) {
+            
+        case CBPeripheralStateConnected:
+            pretty = @"Connected";
+            break;
+            
+        case CBPeripheralStateConnecting:
+            pretty = @"Connecting";
+            break;
+            
+        case CBPeripheralStateDisconnected:
+            pretty = @"Disconnected";
+            break;
+            
+        case CBPeripheralStateDisconnecting:
+            pretty = @"Disconnecting";
+            break;
+            
+    }
+    
+    return pretty;
     
 }
 
@@ -106,7 +144,7 @@
         
         if (peripheral.state == CBPeripheralStateConnected) {
             
-            CBService *connectionService, *demoService, *lightsService, *moveService;
+            CBService *connectionService, *demoService, *lightsService, *moveService, *syncService;
             
             for (CBService *service in peripheral.services) {
                 if ([service.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_CONNECTION_UUID]) {
@@ -121,16 +159,20 @@
                 if ([service.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_MOVE_UUID]) {
                     moveService = service;
                 }
+                if ([service.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_SYNC_UUID]) {
+                    syncService = service;
+                }
             }
             
-            if (connectionService == nil || demoService == nil || lightsService == nil || moveService == nil) {
+            if (connectionService == nil || demoService == nil || lightsService == nil || moveService == nil || syncService == nil) {
                 
                 CBUUID *connectionServiceUUID = [CBUUID UUIDWithString:CURTAIN_SERVICE_CONNECTION_UUID];
                 CBUUID *demoServiceUUID = [CBUUID UUIDWithString:CURTAIN_SERVICE_DEMO_UUID];
                 CBUUID *lightsServiceUUID = [CBUUID UUIDWithString:CURTAIN_SERVICE_LIGHTS_UUID];
                 CBUUID *moveServiceUUID = [CBUUID UUIDWithString:CURTAIN_SERVICE_MOVE_UUID];
+                CBUUID *syncServiceUUID = [CBUUID UUIDWithString:CURTAIN_SERVICE_SYNC_UUID];
                 
-                [peripheral discoverServices:@[connectionServiceUUID, demoServiceUUID, lightsServiceUUID, moveServiceUUID]];
+                [peripheral discoverServices:@[connectionServiceUUID, demoServiceUUID, lightsServiceUUID, moveServiceUUID, syncServiceUUID]];
                 
             }
             
@@ -164,13 +206,13 @@
         }
         
         for (CBCharacteristic *characteristic in moveService.characteristics) {
-            if ([characteristic.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_MOVE_CHARACTERISTIC_OPEN_UUID]) {
+            if ([characteristic.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_MOVE_CHARACTERISTIC_FULL_UUID]) {
                 moveCharacteristic = characteristic;
             }
         }
         
         NSError *error;
-        NSDictionary *json = @{@"action": @"open"};
+        NSDictionary *json = @{@"action": (action == CurtainActionOpen ? @"open" : @"close")};
         NSData *data = [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted error:&error];
         
         [peripheral writeValue:data forCharacteristic:moveCharacteristic type:CBCharacteristicWriteWithResponse];
@@ -213,6 +255,69 @@
         
         
     }
+    
+}
+
+- (void)syncScheduledAction:(CCSchedule *)schedule {
+    
+    CBPeripheral *peripheral = self.peripheral;
+    
+    if (peripheral == nil) {
+        
+        [self checkPeripheral];
+        
+    }else{
+        
+        CBService *syncService;
+        CBCharacteristic *includeCharacteristic;
+        
+        for (CBService *service in peripheral.services) {
+            if ([service.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_SYNC_UUID]) {
+                syncService = service;
+            }
+        }
+        
+        for (CBCharacteristic *characteristic in syncService.characteristics) {
+            if ([characteristic.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_SYNC_CHARACTERISTIC_INCLUDE_UUID]) {
+                includeCharacteristic = characteristic;
+            }
+        }
+        
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        formatter.dateFormat = @"HH:mm";
+        
+        NSString *identifier = [NSString stringWithFormat:@"%f", [schedule.creationDate timeIntervalSince1970]];
+        identifier = [identifier stringByReplacingOccurrencesOfString:@"." withString:@""];
+        
+        NSDictionary *json = @{
+                               @"id": identifier,
+                               @"action": schedule.action,
+                               @"repeat": schedule.repeat,
+                               @"scheduledTime": [formatter stringFromDate:schedule.time],
+                               @"currentTime": [formatter stringFromDate:[NSDate date]]
+                               };
+        
+        NSError *error;
+        NSData *data = [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted error:&error];
+        
+        [peripheral writeValue:data forCharacteristic:includeCharacteristic type:CBCharacteristicWriteWithResponse];
+        
+        
+    }
+    
+}
+
+#pragma mark - Schedule view controller delegate
+
+- (void)scheduledActionCreated:(CCSchedule *)schedule {
+    
+    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:self.schedule.count inSection:2];
+    
+    [self.schedule addObject:schedule];
+    
+    [self.tableView beginUpdates];
+    [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+    [self.tableView endUpdates];
     
 }
 
@@ -259,12 +364,12 @@
         CBUUID *demoService = [CBUUID UUIDWithString:CURTAIN_SERVICE_DEMO_UUID];
         CBUUID *lightsService = [CBUUID UUIDWithString:CURTAIN_SERVICE_LIGHTS_UUID];
         CBUUID *moveService = [CBUUID UUIDWithString:CURTAIN_SERVICE_MOVE_UUID];
-        
+        CBUUID *syncService = [CBUUID UUIDWithString:CURTAIN_SERVICE_SYNC_UUID];
         
         [self. discoveredPeripherals addObject:peripheral];
         
         [peripheral setDelegate:self];
-        [peripheral discoverServices:@[connectionService, demoService, lightsService, moveService]];
+        [peripheral discoverServices:@[connectionService, demoService, lightsService, moveService, syncService]];
         
     }
     
@@ -312,10 +417,19 @@
             
             if ([service.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_MOVE_UUID]) {
                 
-                CBUUID *openCharacteristic = [CBUUID UUIDWithString:CURTAIN_SERVICE_MOVE_CHARACTERISTIC_OPEN_UUID];
-                CBUUID *closeCharacteristic = [CBUUID UUIDWithString:CURTAIN_SERVICE_MOVE_CHARACTERISTIC_CLOSE_UUID];
+                CBUUID *fullCharacteristic = [CBUUID UUIDWithString:CURTAIN_SERVICE_MOVE_CHARACTERISTIC_FULL_UUID];
                 
-                NSArray *characteristics = @[openCharacteristic, closeCharacteristic];
+                NSArray *characteristics = @[fullCharacteristic];
+                [peripheral discoverCharacteristics:characteristics forService:service];
+                
+            }
+            
+            if ([service.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_SYNC_UUID]) {
+                
+                CBUUID *includeCharacteristic = [CBUUID UUIDWithString:CURTAIN_SERVICE_SYNC_CHARACTERISTIC_INCLUDE_UUID];
+                CBUUID *abandonCharacteristic = [CBUUID UUIDWithString:CURTAIN_SERVICE_SYNC_CHARACTERISTIC_ABANDON_UUID];
+                
+                NSArray *characteristics = @[includeCharacteristic, abandonCharacteristic];
                 [peripheral discoverCharacteristics:characteristics forService:service];
                 
             }
@@ -371,7 +485,15 @@
                 self.peripheral = peripheral;
                 [self.discoveredPeripherals removeObject:peripheral];
                 
-                NSLog(@"Fucking equal!!!");
+                [self.tableView reloadRowsAtIndexPaths:@[[NSIndexPath indexPathForRow:0 inSection:0]] withRowAnimation:UITableViewRowAnimationAutomatic];
+                
+                for (CCSchedule *schedule in self.schedule) {
+                    if ([schedule.active boolValue] == YES && [schedule.isSynchronized boolValue] == NO) {
+                        [self syncScheduledAction:schedule];
+                    }
+                }
+                
+                NSLog(@"Authentication successful.");
                 
             }else{
                 
@@ -379,6 +501,22 @@
                 
                 [self.discoveredPeripherals removeObject:peripheral];
                 [self.ignoredPeripherals addObject:peripheral];
+                
+            }
+            
+        }
+        
+        if ([characteristic.UUID.UUIDString isEqualToString:CURTAIN_SERVICE_SYNC_CHARACTERISTIC_INCLUDE_UUID]) {
+            
+            NSLog(@"Reponse from the scheduler service.");
+            
+            if (error) {
+                
+                NSLog(@"Error %@", error.description);
+                
+            }else{
+                
+                NSLog(@"Fucking fucks it worked...");
                 
             }
             
@@ -453,14 +591,16 @@
     static NSString * const cellIdentifierDevice = @"cell-identifier-device";
     static NSString * const cellIdentifierAccessorySwitch = @"cell-identifier-accessory-switch";
     
-    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
+    CGFloat baseY;
     CGFloat sidesPadding = 15;
+    CGSize screenSize = [[UIScreen mainScreen] bounds].size;
     
     UITableViewCell *cell;
     
     UIImageView *imageView;
     UILabel *groupLabel;
     UILabel *titleLabel;
+    UILabel *stateLabel;
     
     UISwitch *accessorySwitch;
     
@@ -470,29 +610,52 @@
         
         if (cell == nil) {
             
+            baseY = 10;
+            
             cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:cellIdentifierDevice];
             cell.selectionStyle = UITableViewCellSelectionStyleNone;
             
-            imageView = [[UIImageView alloc] initWithFrame:CGRectMake(sidesPadding, 10, 80, 80)];
+            imageView = [[UIImageView alloc] initWithFrame:CGRectMake(sidesPadding, baseY, 80, 80)];
+            imageView.tag = CELL_DEVICE_IMAGE_VIEW_TAG;
             [cell.contentView addSubview:imageView];
             
-            groupLabel = [[UILabel alloc] initWithFrame:CGRectMake(sidesPadding+80+10, 10, screenSize.width-(2*sidesPadding)-80-10, 20)];
+            groupLabel = [[UILabel alloc] initWithFrame:CGRectMake(sidesPadding+80+10, baseY, screenSize.width-(2*sidesPadding)-80-10, 20)];
             groupLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleCaption1];
+            groupLabel.tag = CELL_DEVICE_LABEL_GROUP_TAG;
             [cell.contentView addSubview:groupLabel];
             
-            titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(sidesPadding+80+10, 30, screenSize.width-(2*sidesPadding)-80-10, 20)];
+            baseY += groupLabel.frame.size.height;
+            
+            titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(sidesPadding+80+10, baseY, screenSize.width-(2*sidesPadding)-80-10, 20)];
             titleLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+            titleLabel.tag = CELL_DEVICE_LABEL_TITLE_TAG;
             [cell.contentView addSubview:titleLabel];
+            
+            baseY += titleLabel.frame.size.height;
+            
+            stateLabel = [[UILabel alloc] initWithFrame:CGRectMake(sidesPadding+80+10, baseY, screenSize.width-(2*sidesPadding)-80-10, 20)];
+            stateLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleCaption1];
+            stateLabel.tag = CELL_DEVICE_LABEL_STATE_TAG;
+            [cell.contentView addSubview:stateLabel];
             
             imageView.backgroundColor = [UIColor colorWithWhite:0.8 alpha:1];
             //groupLabel.backgroundColor = [UIColor greenColor];
             //titleLabel.backgroundColor = [UIColor orangeColor];
+            //stateLabel.backgroundColor = [UIColor purpleColor];
+            
+        }else{
+            
+            imageView = [cell viewWithTag:CELL_DEVICE_IMAGE_VIEW_TAG];
+            groupLabel = [cell viewWithTag:CELL_DEVICE_LABEL_GROUP_TAG];
+            titleLabel = [cell viewWithTag:CELL_DEVICE_LABEL_TITLE_TAG];
+            stateLabel = [cell viewWithTag:CELL_DEVICE_LABEL_STATE_TAG];
             
         }
         
         imageView.image = self.image;
         groupLabel.text = self.device.group.name;
         titleLabel.text = self.device.name;
+        stateLabel.text = [NSString stringWithFormat:@"State: %@.", [self prettyPeripheralState:self.peripheral.state]];
         
     }else if (indexPath.section == 2 && indexPath.row < self.schedule.count) {
         
@@ -580,6 +743,7 @@
         // Schedule a new action.
         
         ScheduleViewController *view = [[ScheduleViewController alloc] initWithStyle:UITableViewStyleGrouped];
+        view.delegate = self;
         view.managedObjectContext = self.managedObjectContext;
         view.device = self.device;
         

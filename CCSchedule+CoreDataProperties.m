@@ -20,6 +20,7 @@
 @dynamic active;
 @dynamic time;
 @dynamic notify;
+@dynamic isSynchronized;
 @dynamic device;
 
 @end

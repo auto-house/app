@@ -15,12 +15,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (NSFetchRequest<CCSchedule *> *)fetchRequest;
 
-@property (nonatomic) int16_t action;
+@property (nullable, nonatomic, copy) NSNumber *action;
 @property (nullable, nonatomic, copy) NSDate *creationDate;
 @property (nullable, nonatomic, copy) NSString *repeat;
 @property (nullable, nonatomic, copy) NSNumber *active;
 @property (nullable, nonatomic, copy) NSDate *time;
 @property (nullable, nonatomic, copy) NSNumber *notify;
+@property (nullable, nonatomic, copy) NSNumber *isSynchronized;
 @property (nullable, nonatomic, retain) CCDevice *device;
 
 @end
