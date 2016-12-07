@@ -9,6 +9,8 @@
 
 #import <UIKit/UIKit.h>
 #import <CoreBluetooth/CoreBluetooth.h>
+#import <NotificationCenter/NotificationCenter.h>
+#import <UserNotifications/UserNotifications.h>
 #import "CCDevice.h"
 #import "ScheduleViewController.h"
 

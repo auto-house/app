@@ -55,6 +55,8 @@
 
 @implementation DeviceViewController
 
+#pragma mark - Lifecycle
+
 - (void)viewDidLoad {
     
     [super viewDidLoad];
@@ -68,20 +70,44 @@
     
     [self checkPeripheral];
     
+    CBUUID *primary = [CBUUID UUIDWithString:CURTAIN_SERVICE_CONNECTION_UUID];
+    NSArray *known = [self.centralManager retrieveConnectedPeripheralsWithServices:@[primary]];
+    
+    for (CBPeripheral *peripheral in known) {
+        [self.centralManager cancelPeripheralConnection:peripheral];
+    }
+    
     // Fetch device schedule.
     
     NSError *error;
+    
+    
     NSPredicate *predicate = [NSPredicate predicateWithFormat:@"device == %@", self.device];
     NSFetchRequest *request = [NSFetchRequest fetchRequestWithEntityName:@"Schedule"];
     [request setPredicate:predicate];
-    
     NSArray *schedule = [self.managedObjectContext executeFetchRequest:request error:&error];
     
-    for (CCSchedule *item in schedule) {
-        NSLog(@"Schedule %@ %@ %@ %@ %@", item.creationDate, item.action, item.notify, item.repeat, item.time);
-    }
+    // Sort scheduled actions by time.
     
-    self.schedule = [NSMutableArray arrayWithArray:schedule];
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    formatter.dateFormat = @"HH:mm";
+    
+    NSSortDescriptor *sortDescriptor = [NSSortDescriptor sortDescriptorWithKey:@"time" ascending:YES comparator:^NSComparisonResult(NSDate *obj1, NSDate *obj2) {
+        return [[formatter stringFromDate:obj1] compare:[formatter stringFromDate:obj2]];
+    }];
+    
+    self.schedule = [NSMutableArray arrayWithArray:[schedule sortedArrayUsingDescriptors:@[sortDescriptor]]];
+    
+    // Request permission to trigger notifications.
+    
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    [center requestAuthorizationWithOptions:(UNAuthorizationOptionBadge | UNAuthorizationOptionSound | UNAuthorizationOptionAlert)
+                          completionHandler:^(BOOL granted, NSError * _Nullable error) {
+                              if (!error) {
+                                  NSLog(@"request authorization succeeded!");
+                              }
+                          }];
+    
     
 }
 
@@ -129,6 +155,75 @@
     
     return pretty;
     
+}
+
+- (NSString *)prettyStringForAction:(NSInteger)action {
+    
+    NSString *string;
+    
+    switch (action) {
+        case SchedulableActionOpen:
+            string = @"Open";
+            break;
+        case SchedulableActionClose:
+            string = @"Close";
+            break;
+        case SchedulableActionBlink:
+            string = @"Blink";
+            break;
+    }
+    
+    return string;
+}
+
+- (NSString *)prettyStringForRepeat:(NSString *)repeat {
+    
+    NSString *string = @"";
+    NSArray *days = [repeat componentsSeparatedByString:@","];
+    
+    if (days.count == 7) {
+        
+        string = @"Everyday";
+        
+    }else{
+        
+        for (NSString *day in days) {
+            
+            NSString *append = @"";
+            NSInteger d = [day integerValue];
+            
+            switch (d) {
+                case WeekdaySunday:
+                    append = @"Sun ";
+                    break;
+                case WeekdayMonday:
+                    append = @"Mon ";
+                    break;
+                case WeekdayTuesday:
+                    append = @"Tue ";
+                    break;
+                case WeekdayWednesday:
+                    append = @"Wed ";
+                    break;
+                case WeekdayThursday:
+                    append = @"Thr ";
+                    break;
+                case WeekdayFriday:
+                    append = @"Fri ";
+                    break;
+                case WeekdaySaturday:
+                    append = @"Sat ";
+                    break;
+                    
+            }
+            
+            string = [string stringByAppendingString:append];
+            
+        }
+        
+    }
+    
+    return string;
 }
 
 #pragma mark - Private
@@ -336,6 +431,32 @@
     if ([schedule.active boolValue] == YES && [schedule.isSynchronized boolValue] == NO) {
         [self syncScheduledAction:schedule];
     }
+    
+    // Schedule local notification.
+    
+    UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
+    
+    content.title = @"Scheduled Action";
+    content.body = [NSString stringWithFormat:@"%@ - %@",
+                    self.device.name,
+                    [self prettyStringForAction:[schedule.action integerValue]]
+                    ];
+    
+    content.sound = [UNNotificationSound defaultSound];
+    
+    NSInteger interval = [schedule.time timeIntervalSinceDate:[NSDate date]] - 30;
+    
+    UNTimeIntervalNotificationTrigger *trigger = [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:interval repeats:NO];
+    
+    UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:@"FiveSecond" content:content trigger:trigger];
+    
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    
+    [center addNotificationRequest:request withCompletionHandler:^(NSError * _Nullable error) {
+        if (!error) {
+            NSLog(@"add NotificationRequest succeeded!");
+        }
+    }];
     
 }
 
@@ -694,7 +815,9 @@
         CCSchedule *schedule = [self.schedule objectAtIndex:indexPath.row];
         
         cell.textLabel.text = [formatter stringFromDate:schedule.time];
-        cell.detailTextLabel.text = schedule.repeat;
+        cell.detailTextLabel.text = [NSString stringWithFormat:@"%@ - %@",
+                                     [self prettyStringForAction:[schedule.action integerValue]],
+                                     [self prettyStringForRepeat:schedule.repeat]];
         
         accessorySwitch.on = [schedule.active boolValue];
         
