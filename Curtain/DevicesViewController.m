@@ -15,8 +15,13 @@
 #import "CCGroup.h"
 #import "DeviceViewController.h"
 
+#import "BLEManager.h"
+
 
 @interface DevicesViewController ()
+
+@property (nonatomic, retain) NSIndexPath *indexPathToDismiss;
+@property (nonatomic, retain) NSIndexPath *indexPathToInsert;
 
 @property (nonatomic, retain) NSManagedObjectContext *managedObjectContext;
 @property (nonatomic, retain) CBCentralManager *centralManager;
@@ -36,7 +41,7 @@
     [super viewDidLoad];
     
     self.title = @"Devices";
-    self.tableView.rowHeight = 70;
+    self.tableView.rowHeight = 80;
     
     AppDelegate *delegate = (AppDelegate *)[[UIApplication sharedApplication] delegate];
     self.managedObjectContext = delegate.persistentContainer.viewContext;
@@ -61,55 +66,74 @@
     self.navigationItem.leftBarButtonItem = settingsBBI;
     self.navigationItem.rightBarButtonItem = setupBBI;
     
-    
-    
     // Fetch devices.
     
     NSError *error;
     NSFetchRequest *request = [NSFetchRequest fetchRequestWithEntityName:@"Device"];
     NSArray *devices = [self.managedObjectContext executeFetchRequest:request error:&error];
     
-    for (CCDevice *device in devices) {
-        NSLog(@"Name:%@ AuthKey:%@ EncryptionKey:%@ ImageUrl:%@", device.name, device.authKey, device.encryptionKey, device.imageUrl);
-    }
-    
     self.devices = [NSMutableArray arrayWithArray:devices];
     self.images = [[NSMutableDictionary alloc] init];
     
+    // Start the ble manager.
+    
+    /*
+    BLEManager *manager = [BLEManager sharedManager];
+    
+    [manager startScanning:^(NSError *error) {
+        
+        if (error) {
+            
+            NSLog(@"BLE Manager star scanning error: %@", error);
+            
+        }else{
+            
+            for (CCDevice *device in self.devices) {
+                
+                [manager findDeviceWithAuthKey:device.authKey completion:^(CBPeripheral *peripheral, NSError *error) {
+                    
+                    NSLog(@"Found peripheral %@ %@", peripheral, error);
+                    
+                }];
+                
+            }
+            
+        }
+        
+    }];
+    */
+    
 }
 
-#pragma mark - Private
-
-- (void)openSettings {
+- (void)viewWillAppear:(BOOL)animated {
     
-    SettingsViewController *view = [[SettingsViewController alloc] initWithStyle:UITableViewStyleGrouped];
-    view.managedObjectContext = self.managedObjectContext;
+    [super viewWillAppear:animated];
     
-    UINavigationController *navCon = [[UINavigationController alloc] initWithRootViewController:view];
-    [self presentViewController:navCon animated:YES completion:nil];
+    // Deselect rows while the view is appearing.
     
-}
-
-- (void)setupDevice {
-    
-    BOOL foo = YES;
-    
-    if (self.centralManager.state == CBManagerStatePoweredOn || foo) {
+    if (self.indexPathToDismiss) {
         
-        SetupViewController *view = [[SetupViewController alloc] initWithStyle:UITableViewStyleGrouped];
-        view.delegate = self;
-        view.managedObjectContext = self.managedObjectContext;
-        view.centralManager = self.centralManager;
-        UINavigationController *navCon = [[UINavigationController alloc] initWithRootViewController:view];
-        [self presentViewController:navCon animated:YES completion:nil];
+        [self.tableView deselectRowAtIndexPath:self.indexPathToDismiss animated:YES];
         
-    }else{
+        self.indexPathToDismiss = nil;
         
-        NSLog(@"Ops, looks like the core bluetooth central manager is not powered on.");
+    }
+    
+    // Animate the insertion of rows while the view is appearing.
+    
+    if (self.indexPathToInsert) {
+        
+        [self.tableView beginUpdates];
+        [self.tableView insertRowsAtIndexPaths:@[self.indexPathToInsert] withRowAnimation:UITableViewRowAnimationAutomatic];
+        [self.tableView endUpdates];
+        
+        self.indexPathToInsert = nil;
         
     }
     
 }
+
+#pragma mark - NSObjects
 
 - (UIImage *)cropImage:(UIImage *)image {
     
@@ -142,52 +166,85 @@
     return cropped;
 }
 
+#pragma mark - Private
+
+- (void)alertViewWithTitle:(NSString *)title forMessage:(NSString *)message withDismissalTitle:(NSString *)dismissalTitle {
+    
+    // Presents an alert view controller with a single dismissal button.
+    
+    UIAlertController *alertController;
+    UIAlertAction *dismissalAction;
+    
+    alertController = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
+    
+    dismissalAction = [UIAlertAction actionWithTitle:dismissalTitle style:UIAlertActionStyleDefault handler:nil];
+    [alertController addAction:dismissalAction];
+    
+    [self presentViewController:alertController animated:YES completion:nil];
+    
+}
+
+- (void)lookForDevices {
+    
+    //
+    
+}
+
+- (void)openSettings {
+    
+    // Open the application settings controller.
+    
+    SettingsViewController *view = [[SettingsViewController alloc] initWithStyle:UITableViewStyleGrouped];
+    view.managedObjectContext = self.managedObjectContext;
+    
+    UINavigationController *navCon = [[UINavigationController alloc] initWithRootViewController:view];
+    
+    [self presentViewController:navCon animated:YES completion:nil];
+    
+}
+
+- (void)setupDevice {
+    
+    // Open the device setup controller.
+    // It requires the blueooth to be on. Report to the user, if, it is not.
+    
+    if (self.centralManager.state == CBManagerStatePoweredOn) {
+        
+        SetupViewController *view = [[SetupViewController alloc] initWithStyle:UITableViewStyleGrouped];
+        view.delegate = self;
+        view.managedObjectContext = self.managedObjectContext;
+        view.centralManager = self.centralManager;
+        UINavigationController *navCon = [[UINavigationController alloc] initWithRootViewController:view];
+        [self presentViewController:navCon animated:YES completion:nil];
+        
+    }else{
+        
+        [self alertViewWithTitle:@"Error" forMessage:@"Bluetooth is off. " withDismissalTitle:@"Ok"];
+        
+    }
+    
+}
+
 #pragma mark - CBCentralManagerDelegate
 
 - (void)centralManagerDidUpdateState:(CBCentralManager *)central {
     
-    switch (central.state) {
-            
-        case CBManagerStatePoweredOn:
-            NSLog(@"centralManagerDidUpdate: CBManagerStatePoweredOn");
-            break;
-        
-        case CBManagerStatePoweredOff:
-            NSLog(@"centralManagerDidUpdate: CBManagerStatePoweredOff");
-            break;
-        
-        case CBManagerStateUnsupported:
-            NSLog(@"centralManagerDidUpdate: CBManagerStateUnsupported");
-            break;
-        
-        case CBManagerStateUnauthorized:
-            NSLog(@"centralManagerDidUpdate: CBManagerStateUnauthorized");
-            break;
-            
-        case CBManagerStateResetting:
-            NSLog(@"centralManagerDidUpdate: CBManagerStateResetting");
-            break;
-            
-        case CBManagerStateUnknown:
-            NSLog(@"centralManagerDidUpdate: CBManagerStateUnknown");
-            break;
-            
+    if (self.centralManager.state != CBManagerStatePoweredOn) {
+        NSLog(@"The core blueooth central manager is not powered on.");
     }
     
 }
 
 #pragma mark - Setup device delegate
 
-- (void)linkedDevice:(CCDevice *)device {
+- (void)createdDevice:(CCDevice *)device {
     
-    NSInteger index = self.devices.count;
-    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:index inSection:0];
+    // A new device record has been created, update data sources.
+    // Animate its corresponding row insertion when the view appears.
+    
+    self.indexPathToInsert = [NSIndexPath indexPathForRow:self.devices.count inSection:0];
     
     [self.devices addObject:device];
-    
-    [self.tableView beginUpdates];
-    [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
-    [self.tableView endUpdates];
     
 }
 
@@ -241,6 +298,8 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     
+    self.indexPathToDismiss = indexPath;
+    
     CCDevice *device = [self.devices objectAtIndex:indexPath.row];
     UIImage *image = [self.images objectForKey:device.imageUrl];
     
@@ -264,8 +323,6 @@
     view.image = image;
     
     [self.navigationController pushViewController:view animated:YES];
-    
-    [tableView deselectRowAtIndexPath:indexPath animated:YES];
     
 }
 

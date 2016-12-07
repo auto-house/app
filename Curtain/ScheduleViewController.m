@@ -77,20 +77,68 @@
     NSString *string;
     
     switch (action) {
-        case 0:
+        case SchedulableActionOpen:
             string = @"Open";
             break;
-        case 1:
+        case SchedulableActionClose:
             string = @"Close";
+            break;
+        case SchedulableActionBlink:
+            string = @"Blink";
             break;
     }
     
     return string;
 }
 
-- (NSString *)prettyStringForRepeat:(NSInteger)repeat {
+- (NSString *)prettyStringForRepeat:(NSString *)repeat {
     
-    return @"Tue Wed Fri";
+    NSString *string = @"";
+    NSArray *days = [repeat componentsSeparatedByString:@","];
+    
+    if (days.count == 7) {
+        
+        string = @"Everyday";
+        
+    }else{
+        
+        for (NSString *day in days) {
+            
+            NSString *append = @"";
+            NSInteger d = [day integerValue];
+            
+            switch (d) {
+                case WeekdaySunday:
+                    append = @"Sun ";
+                    break;
+                case WeekdayMonday:
+                    append = @"Mon ";
+                    break;
+                case WeekdayTuesday:
+                    append = @"Tue ";
+                    break;
+                case WeekdayWednesday:
+                    append = @"Wed ";
+                    break;
+                case WeekdayThursday:
+                    append = @"Thr ";
+                    break;
+                case WeekdayFriday:
+                    append = @"Fri ";
+                    break;
+                case WeekdaySaturday:
+                    append = @"Sat ";
+                    break;
+                    
+            }
+            
+            string = [string stringByAppendingString:append];
+            
+        }
+        
+    }
+    
+    return string;
 }
 
 - (NSArray *)actionsData {
@@ -234,13 +282,21 @@
     // to string, and bam, store it
     // its easier
     
+    NSInteger indexOffset = (self.editingTime ? 1 : 0);
+    
     if ([key isEqualToString:@"action"]) {
         
         self.action = [[values firstObject] integerValue];
         
+        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:(1 + indexOffset) inSection:0];
+        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+        
     }else if ([key isEqualToString:@"repeat"]) {
         
         self.repeat = [values componentsJoinedByString:@","];
+        
+        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:(2 + indexOffset) inSection:0];
+        [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
         
     }
     

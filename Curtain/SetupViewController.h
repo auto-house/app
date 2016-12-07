@@ -33,6 +33,6 @@
 
 @protocol SetupDeviceDelegate <NSObject>
 
-- (void)linkedDevice:(CCDevice *)device;
+- (void)createdDevice:(CCDevice *)device;
 
 @end

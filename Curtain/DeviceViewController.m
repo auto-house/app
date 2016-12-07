@@ -42,6 +42,8 @@
 
 @interface DeviceViewController ()
 
+@property (nonatomic, retain) NSIndexPath *indexPathToInsert;
+
 @property (nonatomic, retain) NSMutableArray *discoveredPeripherals;
 @property (nonatomic, retain) NSMutableArray *ignoredPeripherals;
 @property (nonatomic, retain) CBPeripheral *peripheral;
@@ -80,6 +82,22 @@
     }
     
     self.schedule = [NSMutableArray arrayWithArray:schedule];
+    
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    
+    [super viewWillAppear:animated];
+    
+    if (self.indexPathToInsert) {
+        
+        [self.tableView beginUpdates];
+        [self.tableView insertRowsAtIndexPaths:@[self.indexPathToInsert] withRowAnimation:UITableViewRowAnimationAutomatic];
+        [self.tableView endUpdates];
+        
+        self.indexPathToInsert = nil;
+        
+    }
     
 }
 
@@ -311,13 +329,13 @@
 
 - (void)scheduledActionCreated:(CCSchedule *)schedule {
     
-    NSIndexPath *indexPath = [NSIndexPath indexPathForRow:self.schedule.count inSection:2];
+    self.indexPathToInsert = [NSIndexPath indexPathForRow:self.schedule.count inSection:2];
     
     [self.schedule addObject:schedule];
     
-    [self.tableView beginUpdates];
-    [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
-    [self.tableView endUpdates];
+    if ([schedule.active boolValue] == YES && [schedule.isSynchronized boolValue] == NO) {
+        [self syncScheduledAction:schedule];
+    }
     
 }
 

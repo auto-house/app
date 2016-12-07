@@ -15,4 +15,8 @@
 
 + (id)sharedManager;
 
+- (void)startScanning:(void (^)(NSError *error))completion;
+
+- (void)findDeviceWithAuthKey:(NSString *)key completion:(void (^)(CBPeripheral *peripheral, NSError *error))completion;
+
 @end

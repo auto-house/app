@@ -129,8 +129,8 @@
     
     if ([self.managedObjectContext save:&error]) {
         
-        if ([self.delegate respondsToSelector:@selector(linkedDevice:)]) {
-            [self.delegate linkedDevice:device];
+        if ([self.delegate respondsToSelector:@selector(createdDevice:)]) {
+            [self.delegate createdDevice:device];
         }
         
         [self dismissViewControllerAnimated:YES completion:nil];
